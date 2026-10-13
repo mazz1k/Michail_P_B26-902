@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 #основные функции программы
 def show_all_1(sorted_students):
     return sorted_students
@@ -33,14 +36,23 @@ def group_stats_6(sorted_students):
     stat_groups = {}
     for el1 in groups:
         groupballs = []
-        studballs = {}
+        group_students = []
         for el2 in sorted_students:
             if el2['group'] == el1:
                 groupballs.append(el2['itog'])
-                studballs[str(el2['itog'])] = el2['student_name']
+                group_students.append(el2)
 
-                
-        stat_groups[f'group {el1}'] = { 'srball': sum(groupballs)//len(groupballs), 'maxball': max(groupballs), 'studmaxball': studballs[str(max(groupballs))]}
+        maxball = max(groupballs)
+        stat_groups[f'group {el1}'] = {
+            'count': len(group_students),
+            'srball': sum(groupballs) / len(groupballs),
+            'maxball': maxball,
+            'studmaxball': [
+                student['student_name']
+                for student in group_students
+                if student['itog'] == maxball
+            ]
+        }
     return stat_groups
 
 
@@ -53,7 +65,7 @@ def task_stats_6(sorted_students):
     task_scores = (taskst1, taskst2, taskst3)
     return [
         {
-            'average': sum(scores) // len(scores),
+            'average': sum(scores) / len(scores),
             'minimum': min(scores),
             'maximum': max(scores),
         }
@@ -65,34 +77,47 @@ def save_report_7(corzap, er, ungr, reit, otbor, grpst, stust):
         f.write(f'Корректных записей: {len(corzap)}\n')
         f.write(f'Некорректных записей: {len(er)}\n')
         f.write(f'Уникальные группы: {", ".join(sorted(ungr))}\n')
-        f.write('Общий рейтинг: \n')
+
+        f.write('\nОбщий рейтинг:\n')
         for r in reit:
-            f.write(r + '\n')
-        f.write('Прошедшие отбор: \n')
+            f.write(format_person(r) + '\n')
+
+        f.write('\nУчастники, прошедшие отбор:\n')
+        if not otbor:
+            f.write('Никто не прошёл отбор.\n')
         for ot in otbor:
-            f.write(ot + '\n')
-        f.write('Статистика по группам: \n')
-        
+            f.write(format_person(ot) + '\n')
+
+        f.write('\nСтатистика по группам:\n')
         for group, data in grpst.items():
-            f.write(group.replace('group', ''))
-            f.write('  Средний итог:', data['srball'])
-            f.write('  Максимальный итог:', data['maxball'])
-            f.write('  Лидер:', data['studmaxball'])
-            f.write()
-        f.write('Статистика по группам')
-        
+            leaders = data['studmaxball']
+            if isinstance(leaders, list):          # если лидеров несколько
+                leaders = ', '.join(leaders)
+            f.write(group.replace('group ', '') + '\n')
+            f.write(f"  Количество участников: {data['count']}\n")
+            f.write(f"  Средний итог: {data['srball']:.2f}\n")
+            f.write(f"  Максимальный итог: {data['maxball']}\n")
+            f.write(f"  Лидер: {leaders}\n")
+
+        f.write('\nСтатистика по задачам:\n')
+        for task_number, data in enumerate(stust, start=1):
+            f.write(f"Задание {task_number}:\n")
+            f.write(f"  Средний балл: {data['average']:.2f}\n")
+            f.write(f"  Минимальный балл: {data['minimum']}\n")
+            f.write(f"  Максимальный балл: {data['maximum']}\n")
+
         f.write('\nОшибки входных данных:\n')
         for e in er:
             f.write(e + '\n')
 
-
 #вспомогательные функции
 def spisokprint(students):
     for el in students:
-                    print(f"{el['number']} | {el['student_name']} | {el['group']} | "
-                          f"баллы: {el['scores'][0]}, {el['scores'][1]}, {el['scores'][2]} | "
-                          f"итог: {el['itog']} | средний: {el['srbal']:.2f} | {el['category']}")
-                    
+                    print(format_person(el))
+def format_person(el):
+    return (f"{el['number']} | {el['student_name']} | {el['group']} | "
+            f"баллы: {el['scores'][0]}, {el['scores'][1]}, {el['scores'][2]} | "
+            f"итог: {el['itog']} | средний: {el['srbal']:.2f} | {el['category']}")
 def get_category(total):
     if total >= 240:
         return 'Отличный результат'
@@ -149,16 +174,17 @@ def main():
                 group_stats = group_stats_6(sortpeople)
                 for group, data in group_stats.items():
                     print(group.replace('group', ''))
-                    print('  Средний итог:', data['srball'])
+                    print('  Количество участников:', data['count'])
+                    print(f"  Средний итог: {data['srball']:.2f}")
                     print('  Максимальный итог:', data['maxball'])
-                    print('  Лидер:', data['studmaxball'])
+                    print('  Лидер:', ', '.join(data['studmaxball']))
                     print()
     
                 task_stats = task_stats_6(sortpeople)
                 for task_number, data in enumerate(task_stats, start=1):
                     print(f"""
     Задание {task_number}:
-        Средний балл: {data['average']}
+        Средний балл: {data['average']:.2f}
         Минимальный балл: {data['minimum']}
         Максимальный балл: {data['maximum']}
     """)
@@ -168,8 +194,15 @@ def main():
                 print('Отчёт сохранён в report.txt')
     
 
-#начало программы 
-notsort = [el.strip().split(';') for el in open('input.txt', encoding='utf-8')]
+#начало программы
+try:
+    input_path = Path(__file__).with_name('input.txt')
+    with input_path.open(encoding='utf-8') as input_file:
+        notsort = [el.strip().split(';') for el in input_file]
+except FileNotFoundError:
+    print('Ошибка: файл input.txt не найден рядом с программой.')
+    raise SystemExit(1)
+
 sortpeople = []
 numbers = []
 errors = []
