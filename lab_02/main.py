@@ -57,6 +57,8 @@ def group_stats_6(sorted_students):
 
 
 def task_stats_6(sorted_students):
+    if not sorted_students:
+        return []
     taskst1, taskst2, taskst3 = [], [], []
     for el in sorted_students:
         taskst1.append(el['scores'][0])
@@ -71,7 +73,7 @@ def task_stats_6(sorted_students):
         }
         for scores in task_scores
     ]
-    
+
 def save_report_7(corzap, er, ungr, reit, otbor, grpst, stust):
     with open("report.txt", "w", encoding="utf-8") as f:
         f.write(f'Корректных записей: {len(corzap)}\n')
@@ -110,14 +112,17 @@ def save_report_7(corzap, er, ungr, reit, otbor, grpst, stust):
         for e in er:
             f.write(e + '\n')
 
+
 #вспомогательные функции
-def spisokprint(students):
-    for el in students:
-                    print(format_person(el))
 def format_person(el):
     return (f"{el['number']} | {el['student_name']} | {el['group']} | "
             f"баллы: {el['scores'][0]}, {el['scores'][1]}, {el['scores'][2]} | "
             f"итог: {el['itog']} | средний: {el['srbal']:.2f} | {el['category']}")
+
+def spisokprint(students):
+    for el in students:
+        print(format_person(el))
+
 def get_category(total):
     if total >= 240:
         return 'Отличный результат'
@@ -132,67 +137,76 @@ def get_category(total):
 #главная функция
 def main():
     while True:
-            print("""
-            1. Показать всех участников
-            2. Показать общий рейтинг
-            3. Найти участников по группе
-            4. Найти участников по части имени
-            5. Показать участников, прошедших отбор
-            6. Показать статистику
-            7. Сохранить отчёт
-            0. Завершить программу
-            """)
-            a = input().strip()
-            if a == '0':
-                break
-            if a not in ('1', '2', '3', '4', '5', '6', '7'):
-                print('Неизвестный пункт меню, попробуйте ещё раз.')
-                continue
-    
-            if a == '1':
-                students = show_all_1(sortpeople)
-                spisokprint(students)
-            elif a == '2':
-                students = rating_2(sortpeople)
-                spisokprint(students)
-            elif a == '3':
-                print('Введите название учебной группы:')
-                students = find_group_3(sortpeople, input())
-                if not students:
-                    print('Участников этой группы нет.')
-                spisokprint(students)
-            elif a == '4':
-                print('Введите имя:')
-                students = find_student_name_4(sortpeople, input())
-                if not students:
-                    print('Учасников с таким именем нет')
-                spisokprint(students)
-            elif a == '5':
-                students = student_selection_5(sortpeople)
-                spisokprint(students)
-            elif a == '6':
-                group_stats = group_stats_6(sortpeople)
-                for group, data in group_stats.items():
-                    print(group.replace('group', ''))
-                    print('  Количество участников:', data['count'])
-                    print(f"  Средний итог: {data['srball']:.2f}")
-                    print('  Максимальный итог:', data['maxball'])
-                    print('  Лидер:', ', '.join(data['studmaxball']))
-                    print()
-    
-                task_stats = task_stats_6(sortpeople)
-                for task_number, data in enumerate(task_stats, start=1):
-                    print(f"""
-    Задание {task_number}:
-        Средний балл: {data['average']:.2f}
-        Минимальный балл: {data['minimum']}
-        Максимальный балл: {data['maximum']}
-    """)
-            elif a == '7':
-                groups = {p['group'] for p in sortpeople}
-                save_report_7(sortpeople, errors, groups, rating_2(sortpeople), student_selection_5(sortpeople), group_stats_6(sortpeople), task_stats_6(sortpeople))
-                print('Отчёт сохранён в report.txt')
-    
+        print("""
+        1. Показать всех участников
+        2. Показать общий рейтинг
+        3. Найти участников по группе
+        4. Найти участников по части имени
+        5. Показать участников, прошедших отбор
+        6. Показать статистику
+        7. Сохранить отчёт
+        0. Завершить программу
+        """)
+        a = input().strip()
+        if a == '0':
+            break
+        if a not in ('1', '2', '3', '4', '5', '6', '7'):
+            print('Неизвестный пункт меню, попробуйте ещё раз.')
+            continue
+
+        # защита от пустого списка корректных записей
+        if a in ('1', '2', '5', '6') and not sortpeople:
+            print('Нет корректных записей для обработки.')
+            continue
+
+        if a == '1':
+            students = show_all_1(sortpeople)
+            spisokprint(students)
+        elif a == '2':
+            students = rating_2(sortpeople)
+            spisokprint(students)
+        elif a == '3':
+            print('Введите название учебной группы:')
+            students = find_group_3(sortpeople, input())
+            if not students:
+                print('Участников этой группы нет.')
+            spisokprint(students)
+        elif a == '4':
+            print('Введите имя:')
+            students = find_student_name_4(sortpeople, input())
+            if not students:
+                print('Участников с таким именем нет')
+            spisokprint(students)
+        elif a == '5':
+            students = student_selection_5(sortpeople)
+            if not students:
+                print('Никто не прошёл отбор.')
+            spisokprint(students)
+        elif a == '6':
+            group_stats = group_stats_6(sortpeople)
+            for group, data in group_stats.items():
+                print(group.replace('group ', ''))
+                print('  Количество участников:', data['count'])
+                print(f"  Средний итог: {data['srball']:.2f}")
+                print('  Максимальный итог:', data['maxball'])
+                print('  Лидер:', ', '.join(data['studmaxball']))
+                print()
+
+            task_stats = task_stats_6(sortpeople)
+            for task_number, data in enumerate(task_stats, start=1):
+                print(f"""
+Задание {task_number}:
+    Средний балл: {data['average']:.2f}
+    Минимальный балл: {data['minimum']}
+    Максимальный балл: {data['maximum']}
+""")
+        elif a == '7':
+            groups = {p['group'] for p in sortpeople}
+            save_report_7(sortpeople, errors, groups, rating_2(sortpeople),
+                          student_selection_5(sortpeople), group_stats_6(sortpeople),
+                          task_stats_6(sortpeople))
+            print('Отчёт сохранён в report.txt')
+
 
 #начало программы
 try:
