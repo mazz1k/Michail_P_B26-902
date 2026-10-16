@@ -128,6 +128,20 @@ def get_category(total):
     else:
         return 'Требуется подготовка'
 
+def run_asserts():
+    sample_students = [
+        {'number': 1, 'student_name': 'Анна', 'group': 'B26-902', 'scores': [90, 80, 70], 'itog': 240, 'srbal': 80.0, 'category': get_category(240)},
+        {'number': 2, 'student_name': 'Борис', 'group': 'B26-902', 'scores': [50, 50, 50], 'itog': 150, 'srbal': 50.0, 'category': get_category(150)},
+        {'number': 3, 'student_name': 'Вика', 'group': 'B26-903', 'scores': [100, 100, 100], 'itog': 300, 'srbal': 100.0, 'category': get_category(300)},
+    ]
+
+    assert show_all_1(sample_students) == sample_students
+    assert [el['student_name'] for el in rating_2(sample_students)] == ['Вика', 'Анна', 'Борис']
+    assert [el['student_name'] for el in find_group_3(sample_students, ' b26-902 ')] == ['Анна', 'Борис']
+    assert [el['student_name'] for el in find_student_name_4(sample_students, 'РИС')] == ['Борис']
+    assert [el['student_name'] for el in student_selection_5(sample_students)] == ['Анна', 'Вика']
+    assert task_stats_6(sample_students)[0] == {'average': 80.0, 'minimum': 50, 'maximum': 100}
+
 
 #главная функция
 def main():
@@ -267,4 +281,5 @@ for line_no, el in enumerate(notsort, start=1):
         'category': get_category(total)
     })
 
+run_asserts()
 main()
