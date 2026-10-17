@@ -75,7 +75,8 @@ def task_stats_6(sorted_students):
     ]
 
 def save_report_7(corzap, er, ungr, reit, otbor, grpst, stust):
-    with open("report.txt", "w", encoding="utf-8") as f:
+    report_path = Path(__file__).with_name('report.txt')
+    with report_path.open("w", encoding="utf-8") as f:
         f.write(f'Корректных записей: {len(corzap)}\n')
         f.write(f'Некорректных записей: {len(er)}\n')
         f.write(f'Уникальные группы: {", ".join(sorted(ungr))}\n')
@@ -146,7 +147,12 @@ def run_asserts():
     assert [el['student_name'] for el in find_student_name_4(sample_students, 'РИС')] == ['Борис']
     assert [el['student_name'] for el in student_selection_5(sample_students)] == ['Анна', 'Вика']
     assert task_stats_6(sample_students)[0] == {'average': 80.0, 'minimum': 50, 'maximum': 100}
-
+    assert get_category(119) == 'Требуется подготовка'
+    assert get_category(120) == 'Удовлетворительный результат'
+    assert get_category(179) == 'Удовлетворительный результат'
+    assert get_category(180) == 'Хороший результат'
+    assert get_category(239) == 'Хороший результат'
+    assert get_category(240) == 'Отличный результат'
 
 #главная функция
 def main():
