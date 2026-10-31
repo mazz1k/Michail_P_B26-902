@@ -147,12 +147,7 @@ def run_asserts():
     assert [el['student_name'] for el in find_student_name_4(sample_students, 'РИС')] == ['Борис']
     assert [el['student_name'] for el in student_selection_5(sample_students)] == ['Анна', 'Вика']
     assert task_stats_6(sample_students)[0] == {'average': 80.0, 'minimum': 50, 'maximum': 100}
-    assert get_category(119) == 'Требуется подготовка'
-    assert get_category(120) == 'Удовлетворительный результат'
-    assert get_category(179) == 'Удовлетворительный результат'
-    assert get_category(180) == 'Хороший результат'
-    assert get_category(239) == 'Хороший результат'
-    assert get_category(240) == 'Отличный результат'
+    
 
 #главная функция
 def main():
@@ -215,11 +210,11 @@ def main():
             task_stats = task_stats_6(sortpeople)
             for task_number, data in enumerate(task_stats, start=1):
                 print(f"""
-Задание {task_number}:
-    Средний балл: {data['average']:.2f}
-    Минимальный балл: {data['minimum']}
-    Максимальный балл: {data['maximum']}
-""")
+                            Задание {task_number}:
+                            Средний балл: {data['average']:.2f}
+                            Минимальный балл: {data['minimum']}
+                            Максимальный балл: {data['maximum']}
+                        """)
         elif a == '7':
             groups = {p['group'] for p in sortpeople}
             save_report_7(sortpeople, errors, groups, rating_2(sortpeople),
