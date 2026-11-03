@@ -165,12 +165,12 @@ def main():
         a = input().strip()
         if a == '0':
             break
-        if a not in ('1', '2', '3', '4', '5', '6', '7'):
+        if a not in [str(el) for el in range(1, 8)]: 
             print('Неизвестный пункт меню, попробуйте ещё раз.')
             continue
 
         # защита от пустого списка корректных записей
-        if a in ('1', '2', '5', '6') and not sortpeople:
+        if a in [str(el) for el in range(1, 7)] and not sortpeople:
             print('Нет корректных записей для обработки.')
             continue
 
