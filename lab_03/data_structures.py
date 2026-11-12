@@ -2,6 +2,7 @@ class Node:
     """Узел связной структуры: значение и ссылка на следующий узел."""
 
     def __init__(self, value, next_node=None):
+        """Создать узел с заданным значением и ссылкой на следующий узел."""
         self.value = value
         self.next = next_node
 
@@ -10,6 +11,7 @@ class Stack:
     """Стек на узлах: последний добавленный элемент извлекается первым."""
 
     def __init__(self):
+        """Создать пустой стек."""
         self.head = None
 
     def push(self, value):
@@ -53,6 +55,7 @@ class Queue:
     """Очередь на узлах: добавление в хвост, извлечение из головы."""
 
     def __init__(self):
+        """Создать пустую очередь с головой и хвостом."""
         self.head = None
         self.tail = None
 
@@ -80,6 +83,15 @@ class Queue:
         """Вернуть True, если очередь пуста."""
         return self.head is None
 
+    def to_list(self):
+        """Получить значения для вывода без извлечения элементов из очереди."""
+        values = []
+        current = self.head
+        while current is not None:
+            values.append(current.value)
+            current = current.next
+        return values
+
     def __repr__(self):
         """Строка для вывода очереди: от головы к хвосту."""
         values = []
@@ -94,6 +106,7 @@ class LinkedList:
     """Односвязный список: история выдач."""
 
     def __init__(self):
+        """Создать пустую историю выдач."""
         self.head = None
         self.tail = None
 
