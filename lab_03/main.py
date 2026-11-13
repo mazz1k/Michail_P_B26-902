@@ -1,13 +1,9 @@
 """Учёт библиотечных выдач на собственных связных структурах данных."""
 
-import argparse
 from copy import deepcopy
 from pathlib import Path
 
-if __package__:
-    from .data_structures import Stack, Queue, LinkedList
-else:
-    from data_structures import Stack, Queue, LinkedList
+from data_structures import Stack, Queue, LinkedList
 
 
 # Загрузка и проверка данных
@@ -41,6 +37,20 @@ def parse_issue(line, numbers, records_by_isbn):
     }
 
 
+def sort_issue_queue(issue_queue):
+    """Сортировать очередь по номерам выбором, без промежуточного списка."""
+    current = issue_queue.head
+    while current is not None:
+        minimum = current
+        candidate = current.next
+        while candidate is not None:
+            if candidate.value['number'] < minimum.value['number']:
+                minimum = candidate
+            candidate = candidate.next
+        current.value, minimum.value = minimum.value, current.value
+        current = current.next
+
+
 def parse_issues(lines):
     """Вернуть очередь по номерам, индекс ISBN, ошибки и число верных записей."""
     records_by_isbn = {}
@@ -58,9 +68,9 @@ def parse_issues(lines):
         records_by_isbn[record['isbn']] = record
 
     issue_queue = Queue()
-    # sorted создаёт временный список; основное хранение очереди - в узлах.
-    for record in sorted(records_by_isbn.values(), key=lambda item: item['number']):
+    for record in records_by_isbn.values():
         issue_queue.enqueue(record)
+    sort_issue_queue(issue_queue)
     return issue_queue, records_by_isbn, errors, len(records_by_isbn)
 
 
@@ -124,7 +134,7 @@ def get_unique_sections(records_by_isbn):
 def section_statistics(records_by_isbn, history, return_stack):
     """Посчитать фактические выдачи и невозвращённые книги по разделам."""
     statistics = {}
-    for section in sorted(get_unique_sections(records_by_isbn)):
+    for section in get_unique_sections(records_by_isbn):
         statistics[section] = {
             'issue_count': 0,
             'unreturned_count': 0,
@@ -170,7 +180,10 @@ def format_statistics(statistics):
     if not statistics:
         return 'Нет корректных записей для вычисления статистики.'
     lines = []
-    for section, data in sorted(statistics.items()):
+    sections = list(statistics)
+    sections.sort()
+    for section in sections:
+        data = statistics[section]
         latest = data['last_issue'] if data['last_issue'] is not None else '-'
         maximum = data['max_number'] if data['max_number'] is not None else '-'
         lines.extend([
@@ -187,7 +200,8 @@ def save_report(records_by_isbn, history, return_stack, errors, path=None):
     """Сохранить статистику, историю и ошибки в UTF-8 отчёт без изменения данных."""
     if path is None:
         path = Path(__file__).with_name('issues_report.txt')
-    sections = sorted(get_unique_sections(records_by_isbn))
+    sections = list(get_unique_sections(records_by_isbn))
+    sections.sort()
     statistics = section_statistics(records_by_isbn, history, return_stack)
     issued = get_history(history)
     lines = [
@@ -252,7 +266,8 @@ def run_menu(issue_queue, records_by_isbn, history, return_stack, errors,
         elif choice == '6':
             print_issues(reverse_history(history), 'История выдач пуста.')
         elif choice == '7':
-            sections = sorted(get_unique_sections(records_by_isbn))
+            sections = list(get_unique_sections(records_by_isbn))
+            sections.sort()
             print('Уникальные разделы:', ', '.join(sections) if sections else 'нет')
             print(format_statistics(
                 section_statistics(records_by_isbn, history, return_stack)))
@@ -437,21 +452,10 @@ def main(input_path=None, report_path=None):
     return 0
 
 
-def cli():
-    """Запустить меню или автоматические проверки по ключу --test."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--test', action='store_true', help='запустить проверки assert')
-    args = parser.parse_args()
-    if args.test:
-        run_asserts()
-        print('Все автоматические проверки пройдены.')
-        return 0
+if __name__ == '__main__':
+    run_asserts()
+    print('Все автоматические проверки пройдены.')
     try:
-        return main()
+        raise SystemExit(main())
     except (EOFError, KeyboardInterrupt):
         print('\nВвод завершён. Программа остановлена.')
-        return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(cli())
