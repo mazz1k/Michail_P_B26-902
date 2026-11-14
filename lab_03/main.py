@@ -9,12 +9,20 @@ from data_structures import Stack, Queue, LinkedList
 # Загрузка и проверка данных
 def parse_issue(line, numbers, records_by_isbn):
     """Разобрать одну запись или сообщить причину ошибки через ValueError."""
-    fields = [field.strip() for field in line.split(';')]
-    if len(fields) != 5:
+    if line.count(';') != 4:
         raise ValueError('неверное количество полей.')
 
+    number_text, _, remaining = line.partition(';')
+    reader, _, remaining = remaining.partition(';')
+    isbn, _, remaining = remaining.partition(';')
+    section, _, title = remaining.partition(';')
+    reader = reader.strip()
+    isbn = isbn.strip()
+    section = section.strip()
+    title = title.strip()
+
     try:
-        number = int(fields[0])
+        number = int(number_text.strip())
     except ValueError:
         raise ValueError('номер выдачи должен быть целым числом.') from None
     if number <= 0:
@@ -22,18 +30,19 @@ def parse_issue(line, numbers, records_by_isbn):
     if number in numbers:
         raise ValueError(f'повторяющийся номер выдачи {number}.')
 
-    for name, value in zip(('читатель', 'isbn', 'раздел', 'название'), fields[1:]):
+    for name, value in (('читатель', reader), ('isbn', isbn),
+                        ('раздел', section), ('название', title)):
         if not value:
             raise ValueError(f"пустое обязательное поле: '{name}'.")
-    if fields[2] in records_by_isbn:
-        raise ValueError(f'повторяющийся ISBN {fields[2]}.')
+    if isbn in records_by_isbn:
+        raise ValueError(f'повторяющийся ISBN {isbn}.')
 
     return {
         'number': number,
-        'reader': fields[1],
-        'isbn': fields[2],
-        'section': fields[3],
-        'title': fields[4],
+        'reader': reader,
+        'isbn': isbn,
+        'section': section,
+        'title': title,
     }
 
 
@@ -169,55 +178,77 @@ def format_issue(record):
 
 def print_issues(records, empty_message):
     """Вывести записи или сообщение об их отсутствии."""
-    if not records:
-        print(empty_message)
+    printed = False
     for record in records:
         print(format_issue(record))
+        printed = True
+    if not printed:
+        print(empty_message)
+
+
+def format_sections(sections):
+    """Сформировать алфавитный перечень разделов без промежуточного списка."""
+    remaining = set(sections)
+    text = ''
+    while remaining:
+        section = min(remaining)
+        remaining.remove(section)
+        if text:
+            text += ', '
+        text += section
+    return text if text else 'нет'
 
 
 def format_statistics(statistics):
     """Сформировать текст статистики, включая случай пустого набора."""
     if not statistics:
         return 'Нет корректных записей для вычисления статистики.'
-    lines = []
-    sections = list(statistics)
-    sections.sort()
-    for section in sections:
+    text = ''
+    sections = set(statistics)
+    while sections:
+        section = min(sections)
+        sections.remove(section)
         data = statistics[section]
         latest = data['last_issue'] if data['last_issue'] is not None else '-'
         maximum = data['max_number'] if data['max_number'] is not None else '-'
-        lines.extend([
-            section,
-            f"  Количество выдач: {data['issue_count']}",
-            f"  Ещё не возвращено: {data['unreturned_count']}",
-            f'  Номер самой поздней выдачи: {latest}',
-            f'  Максимальный номер выдачи: {maximum}',
-        ])
-    return '\n'.join(lines)
+        if text:
+            text += '\n'
+        text += (
+            f'{section}\n'
+            f"  Количество выдач: {data['issue_count']}\n"
+            f"  Ещё не возвращено: {data['unreturned_count']}\n"
+            f'  Номер самой поздней выдачи: {latest}\n'
+            f'  Максимальный номер выдачи: {maximum}'
+        )
+    return text
 
 
 def save_report(records_by_isbn, history, return_stack, errors, path=None):
     """Сохранить статистику, историю и ошибки в UTF-8 отчёт без изменения данных."""
     if path is None:
         path = Path(__file__).with_name('issues_report.txt')
-    sections = list(get_unique_sections(records_by_isbn))
-    sections.sort()
+    sections = format_sections(get_unique_sections(records_by_isbn))
     statistics = section_statistics(records_by_isbn, history, return_stack)
-    issued = get_history(history)
-    lines = [
-        f'Корректных записей: {len(records_by_isbn)}',
-        f'Некорректных записей: {len(errors)}',
-        'Уникальные разделы: ' + (', '.join(sections) if sections else 'нет'),
-        '\nСтатистика по разделам:',
-        format_statistics(statistics),
-        '\nСписок выданных книг (текущий порядок истории):',
-    ]
-    lines.extend(format_issue(record) for record in issued)
-    if not issued:
-        lines.append('Книги ещё не выдавались.')
-    lines.append('\nОшибки входных данных:')
-    lines.extend(errors if errors else ['Ошибок нет.'])
-    Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    with Path(path).open('w', encoding='utf-8') as report:
+        report.write(
+            f'Корректных записей: {len(records_by_isbn)}\n'
+            f'Некорректных записей: {len(errors)}\n'
+            f'Уникальные разделы: {sections}\n'
+            '\nСтатистика по разделам:\n'
+            f'{format_statistics(statistics)}\n'
+            '\nСписок выданных книг (текущий порядок истории):\n'
+        )
+        current = history.head
+        if current is None:
+            report.write('Книги ещё не выдавались.\n')
+        while current is not None:
+            report.write(format_issue(current.value) + '\n')
+            current = current.next
+        report.write('\nОшибки входных данных:\n')
+        for error in errors:
+            report.write(error + '\n')
+        if not errors:
+            report.write('Ошибок нет.\n')
     return Path(path)
 
 
@@ -241,7 +272,7 @@ def run_menu(issue_queue, records_by_isbn, history, return_stack, errors,
         if choice == '0':
             break
         if choice == '1':
-            print_issues(issue_queue.to_list(), 'Очередь выдач пуста.')
+            print_issues(issue_queue, 'Очередь выдач пуста.')
         elif choice == '2':
             record = issue_book(issue_queue, history, return_stack)
             if record is None:
@@ -266,9 +297,8 @@ def run_menu(issue_queue, records_by_isbn, history, return_stack, errors,
         elif choice == '6':
             print_issues(reverse_history(history), 'История выдач пуста.')
         elif choice == '7':
-            sections = list(get_unique_sections(records_by_isbn))
-            sections.sort()
-            print('Уникальные разделы:', ', '.join(sections) if sections else 'нет')
+            sections = format_sections(get_unique_sections(records_by_isbn))
+            print('Уникальные разделы:', sections)
             print(format_statistics(
                 section_statistics(records_by_isbn, history, return_stack)))
         elif choice == '8':
@@ -302,7 +332,7 @@ def run_asserts():
     queue = Queue()
     queue.enqueue('первая')
     queue.enqueue('вторая')
-    assert queue.to_list() == ['первая', 'вторая']
+    assert tuple(queue) == ('первая', 'вторая')
     assert queue.dequeue() == 'первая'
     assert queue.dequeue() == 'вторая'
     assert queue.is_empty() and queue.tail is None
@@ -330,7 +360,7 @@ def run_asserts():
     else:
         assert False, 'Пустой стек должен выбрасывать IndexError'
 
-    lines = [
+    lines = (
         '3;Третий читатель;ISBN-3;история;Третья книга',
         ' 1 ; Первый читатель ; ISBN-1 ; техника ; Первая книга ',
         '2;Второй читатель;ISBN-2;техника;Вторая книга',
@@ -345,7 +375,7 @@ def run_asserts():
         '4;Читатель;ISBN-4; ;Книга',
         '4;Читатель;ISBN-4;история; ',
         '4;Читатель;ISBN-1;история;Книга',
-    ]
+    )
     original_lines = lines[:]
     issue_queue, catalog, errors, count = parse_issues(lines)
     assert lines == original_lines
@@ -353,9 +383,11 @@ def run_asserts():
     assert errors[0].startswith('Строка 5:')
     assert 'повторяющийся номер' in errors[4]
     assert 'повторяющийся ISBN' in errors[-1]
-    assert [record['number'] for record in issue_queue.to_list()] == [1, 2, 3]
+    assert tuple(record['number'] for record in issue_queue) == (1, 2, 3)
     assert catalog['ISBN-1']['reader'] == 'Первый читатель'
     assert get_unique_sections(catalog) == {'история', 'техника'}
+    assert format_sections(get_unique_sections(catalog)) == 'история, техника'
+    assert format_sections(set()) == 'нет'
 
     history = LinkedList()
     returns = Stack()
@@ -374,7 +406,7 @@ def run_asserts():
     assert issue_book(issue_queue, history, returns)['number'] == 2
     assert issue_book(issue_queue, history, returns)['number'] == 3
     assert issue_book(issue_queue, history, returns) is None
-    assert [record['number'] for record in get_history(history)] == [1, 2, 3]
+    assert tuple(record['number'] for record in get_history(history)) == (1, 2, 3)
     assert return_book(returns, ' ISBN-2 ') is True
     assert return_book(returns, 'ISBN-2') is False
     statistics = section_statistics(catalog, history, returns)
@@ -387,10 +419,10 @@ def run_asserts():
     assert cancel_last_issue(returns) is None
     assert len(get_history(history)) == 3
 
-    assert [record['number'] for record in reverse_history(history)] == [3, 2, 1]
+    assert tuple(record['number'] for record in reverse_history(history)) == (3, 2, 1)
     assert history.tail.value['number'] == 1 and history.tail.next is None
     history.append({'number': 4, 'isbn': 'ISBN-4'})
-    assert [record['number'] for record in get_history(history)] == [3, 2, 1, 4]
+    assert tuple(record['number'] for record in get_history(history)) == (3, 2, 1, 4)
     assert find_in_history(history, 'ISBN-2')['number'] == 2
     assert find_in_history(history, 'нет') is None
     result = find_book(catalog, ' ISBN-1 ')
@@ -406,7 +438,7 @@ def run_asserts():
     assert other_count == count and other_errors == errors
     assert other_queue is not issue_queue and other_catalog is not catalog
     assert other_catalog['ISBN-1'] is not catalog['ISBN-1']
-    empty_queue, empty_catalog, empty_errors, empty_count = parse_issues([])
+    empty_queue, empty_catalog, empty_errors, empty_count = parse_issues(())
     assert empty_queue.is_empty() and empty_catalog == {}
     assert empty_errors == [] and empty_count == 0
     assert section_statistics({}, LinkedList(), Stack()) == {}
@@ -419,7 +451,7 @@ def run_asserts():
         loaded_history, loaded_returns = LinkedList(), Stack()
         issue_book(loaded_queue, loaded_history, loaded_returns)
         before = deepcopy((loaded_catalog, loaded_errors, get_history(loaded_history)))
-        before_queue = loaded_queue.to_list()
+        before_queue = tuple(loaded_queue)
         before_stack = repr(loaded_returns)
         report_path = save_report(loaded_catalog, loaded_history, loaded_returns,
                                   loaded_errors, Path(folder) / 'report.txt')
@@ -427,7 +459,7 @@ def run_asserts():
         assert 'Корректных записей: 3' in report and 'Некорректных записей: 10' in report
         assert 'ISBN-1' in report and errors[0] in report
         assert (loaded_catalog, loaded_errors, get_history(loaded_history)) == before
-        assert loaded_queue.to_list() == before_queue
+        assert tuple(loaded_queue) == before_queue
         assert repr(loaded_returns) == before_stack
 
 

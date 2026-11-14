@@ -43,12 +43,7 @@ class Stack:
 
     def __repr__(self):
         """Строка для вывода стека: от вершины вниз."""
-        values = []
-        current = self.head
-        while current is not None:
-            values.append(repr(current.value))
-            current = current.next
-        return "Stack(" + " -> ".join(values) + ")"
+        return "Stack(" + format_nodes(self.head) + ")"
 
 
 class Queue:
@@ -83,23 +78,16 @@ class Queue:
         """Вернуть True, если очередь пуста."""
         return self.head is None
 
-    def to_list(self):
-        """Получить значения для вывода без извлечения элементов из очереди."""
-        values = []
+    def __iter__(self):
+        """Перебирать значения по узлам без извлечения и временного списка."""
         current = self.head
         while current is not None:
-            values.append(current.value)
+            yield current.value
             current = current.next
-        return values
 
     def __repr__(self):
         """Строка для вывода очереди: от головы к хвосту."""
-        values = []
-        current = self.head
-        while current is not None:
-            values.append(repr(current.value))
-            current = current.next
-        return "Queue(" + " -> ".join(values) + ")"
+        return "Queue(" + format_nodes(self.head) + ")"
 
 
 class LinkedList:
@@ -142,12 +130,18 @@ class LinkedList:
 
     def __repr__(self):
         """Строка для вывода списка: от головы к хвосту."""
-        values = []
-        current = self.head
-        while current is not None:
-            values.append(repr(current.value))
-            current = current.next
-        return "LinkedList(" + " -> ".join(values) + ")"
+        return "LinkedList(" + format_nodes(self.head) + ")"
+
+
+def format_nodes(node):
+    """Сформировать строку цепочки узлов без промежуточного списка значений."""
+    text = ''
+    while node is not None:
+        text += repr(node.value)
+        node = node.next
+        if node is not None:
+            text += ' -> '
+    return text
 
 
 def collect_values(node):
